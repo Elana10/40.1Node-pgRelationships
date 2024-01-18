@@ -49,12 +49,21 @@ router.post('/', async (req, res, next) => {
 router.put('/:id', async (req, res, next) => {
     try{
         const {id} = req.params;
-        const {amt} = req.body;
-        const results = await db.query('UPDATE companies SET amt = $2 WHERE id = $1 RETURNING *;', [id, amt]);
+        const {amt, paid} = req.body;
+        if(paid){
+            let date = Date()
+            const results = await db.query(`UPDATE invoices SET amt = $1, paid = $2, paid_date = $4 WHERE id = $# RETURNING *`, [id, amt, paid, date])
+        } 
+        if( paid === false){
+            const results = await db.query(`UPDATE invoices SET amt = $1, paid = $2, paid_date = 'null' WHERE id = $3 RETURNING *;`, [amt, paid, id])
+        } else {
+            const results = await db.query('UPDATE invoices SET amt = $2 WHERE id = $1 RETURNING *;', [id, amt]); 
+        }
         if(results.rows.length === 0){
             throw new ExpressError(`Invoice ID ${id} cannot be found.`, 404)
-        }
-        return res.json({invoice : results.rows[0]})
+        }          
+        return res.json({invoice : results.rows[0]})         
+
     } catch(e){
         return next (e);
     }
